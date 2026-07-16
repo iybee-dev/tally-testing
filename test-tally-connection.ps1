@@ -29,7 +29,6 @@ function Invoke-TallyApi {
     )
 
     $headers = @{
-        "content-type" = "application/json"
         "version"      = "1"
         "tallyrequest" = "Export"
         "type"         = $Type
@@ -63,9 +62,19 @@ function Invoke-TallyApi {
         Write-Host "[OK]   $TestName" -ForegroundColor Green
     }
     catch {
-        $result.status = "failed"
-        $result.error  = $_.Exception.Message
-        Write-Host "[FAIL] $TestName - $($_.Exception.Message)" -ForegroundColor Red
+        # Retry once against 127.0.0.1 in case "localhost" resolved to IPv6 and failed
+        try {
+            $response = Invoke-RestMethod -Uri "http://127.0.0.1:9000" -Method POST -Headers $headers -Body $body -ContentType "application/json"
+            $result.status   = "success"
+            $result.response = $response
+            $result.note     = "Succeeded on retry using 127.0.0.1 instead of localhost"
+            Write-Host "[OK]   $TestName (via 127.0.0.1)" -ForegroundColor Green
+        }
+        catch {
+            $result.status = "failed"
+            $result.error  = $_.Exception.Message
+            Write-Host "[FAIL] $TestName - $($_.Exception.Message)" -ForegroundColor Red
+        }
     }
 
     return $result
