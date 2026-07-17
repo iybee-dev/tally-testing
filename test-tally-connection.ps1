@@ -54,9 +54,28 @@ function Invoke-TallyApi {
     foreach ($uri in $urisToTry) {
         try {
             $response = Invoke-RestMethod -Uri $uri -Method POST -Headers $headers -Body $BodyJson -ContentType "application/json"
-            $result.status   = "success"
-            $result.response = $response
-            Write-Host "[OK]   $TestName" -ForegroundColor Green
+
+            # For Import requests, only count it a success if Tally actually created/altered something
+            if ($TallyRequest -eq "Import") {
+                $createdCount = $response.data.import_result.created
+                $alteredCount = $response.data.import_result.altered
+                if (($createdCount -gt 0) -or ($alteredCount -gt 0)) {
+                    $result.status   = "success"
+                    $result.response = $response
+                    Write-Host "[OK]   $TestName" -ForegroundColor Green
+                }
+                else {
+                    $result.status   = "failed"
+                    $result.response = $response
+                    $result.error    = "Tally accepted the request but created/altered 0 records - check field format"
+                    Write-Host "[FAIL] $TestName - accepted but nothing was created" -ForegroundColor Red
+                }
+            }
+            else {
+                $result.status   = "success"
+                $result.response = $response
+                Write-Host "[OK]   $TestName" -ForegroundColor Green
+            }
             return $result
         }
         catch {
@@ -120,9 +139,10 @@ $createStockItemBody = @"
       "tallymessage": [
         {
           "stockitem": {
-            "name": "$stockItemName",
-            "parent": "Primary",
-            "baseunits": "Nos"
+            "action": "Create",
+            "name": { "type": "String", "value": "$stockItemName" },
+            "parent": { "type": "String", "value": "Primary" },
+            "baseunits": { "type": "String", "value": "Nos" }
           }
         }
       ]
