@@ -11,6 +11,9 @@
 
 $ErrorActionPreference = "Stop"
 
+# Company name as it appears exactly in Tally (Gateway of Tally, top of screen)
+$companyName = "MURUGU FURNITURE PRIVATE LIMITED 26-27"
+
 $namePrefix = "API-Test-Item-"
 
 $outputFolder = "D:\tally-testing"
@@ -103,18 +106,26 @@ foreach ($name in $namesToDelete) {
 
     $deleteBody = @"
 {
-  "body": {
-    "data": {
-      "tallymessage": [
-        {
-          "stockitem": {
-            "action": "Delete",
-            "name": "$name"
-          }
-        }
-      ]
+  "static_variables": [
+    {
+      "name": "svMstImportFormat",
+      "value": "jsonex"
+    },
+    {
+      "name": "svCurrentCompany",
+      "value": "$companyName"
     }
-  }
+  ],
+  "tallymessage": [
+    {
+      "metadata": {
+        "type": "Stock Item",
+        "name": "$name",
+        "action": "delete"
+      },
+      "name": "$name"
+    }
+  ]
 }
 "@
 
@@ -122,9 +133,18 @@ foreach ($name in $namesToDelete) {
 
     try {
         $response = Invoke-TallyApi -TallyRequest "Import" -Type "Data" -Id "All Masters" -BodyJson $deleteBody
-        $entry.status   = "deleted"
-        $entry.response = $response
-        Write-Host "[DELETED] $name" -ForegroundColor Green
+        $deletedCount = $response.data.import_result.deleted
+        if ($deletedCount -gt 0) {
+            $entry.status   = "deleted"
+            $entry.response = $response
+            Write-Host "[DELETED] $name" -ForegroundColor Green
+        }
+        else {
+            $entry.status   = "failed"
+            $entry.response = $response
+            $entry.error    = "Tally accepted the request but deleted 0 records - check field format"
+            Write-Host "[FAILED]  $name - accepted but nothing was deleted" -ForegroundColor Red
+        }
     }
     catch {
         $entry.status = "failed"
