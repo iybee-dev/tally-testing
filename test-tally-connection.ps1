@@ -15,6 +15,9 @@
 
 $ErrorActionPreference = "Stop"
 
+# Company name as it appears exactly in Tally (Gateway of Tally, top of screen)
+$companyName = "MURUGU FURNITURE PRIVATE LIMITED 26-27"
+
 $outputFolder = "D:\tally-testing"
 if (-not (Test-Path "D:\")) {
     Write-Host "D: drive not found - using current folder instead." -ForegroundColor Yellow
@@ -134,19 +137,28 @@ $stockItemName = "API-Test-Item-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 
 $createStockItemBody = @"
 {
-  "body": {
-    "data": {
-      "tallymessage": [
-        {
-          "stockitem": {
-            "action": "Create",
-            "name": { "type": "String", "value": "$stockItemName" },
-            "baseunits": { "type": "String", "value": "Nos" }
-          }
-        }
-      ]
+  "static_variables": [
+    {
+      "name": "svMstImportFormat",
+      "value": "jsonex"
+    },
+    {
+      "name": "svCurrentCompany",
+      "value": "$companyName"
     }
-  }
+  ],
+  "tallymessage": [
+    {
+      "metadata": {
+        "type": "Stock Item",
+        "name": "$stockItemName",
+        "action": "create"
+      },
+      "name": "$stockItemName",
+      "parent": "\u0004 Primary",
+      "base units": "Nos"
+    }
+  ]
 }
 "@
 
