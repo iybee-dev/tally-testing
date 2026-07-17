@@ -141,7 +141,6 @@ $createStockItemBody = @"
           "stockitem": {
             "action": "Create",
             "name": { "type": "String", "value": "$stockItemName" },
-            "parent": { "type": "String", "value": "Primary" },
             "baseunits": { "type": "String", "value": "Nos" }
           }
         }
